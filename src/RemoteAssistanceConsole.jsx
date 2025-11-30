@@ -1,5 +1,20 @@
 import React, { useState } from 'react';
 import { MapPin, Radio, Zap, AlertCircle, Users, User, Navigation, Eye, Package } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Component to handle map clicks for relocate mode
+const MapClickHandler = ({ interventionMode, onMapClick }) => {
+  useMapEvents({
+    click: (e) => {
+      if (interventionMode === 'relocate') {
+        onMapClick([e.latlng.lat, e.latlng.lng]);
+      }
+    },
+  });
+  return null;
+};
 
 const RemoteAssistanceConsole = () => {
   const [selectedTicket, setSelectedTicket] = useState('AV-2847');
@@ -81,6 +96,60 @@ const RemoteAssistanceConsole = () => {
     'Heavy Traffic Merge',
     'Other Obstruction'
   ];
+
+  // Custom Leaflet icons
+  const vehicleIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="#39FF14" stroke="#000" stroke-width="2"/>
+        <path d="M12 6 L12 2 L10 5 L14 5 Z" fill="#39FF14"/>
+      </svg>
+    `),
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  const passengerIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
+        <path d="M12 0 C7 0 3 4 3 9 C3 14 12 24 12 24 S21 14 21 9 C21 4 17 0 12 0 Z" fill="#FF9500" stroke="#000" stroke-width="1.5"/>
+        <circle cx="12" cy="9" r="4" fill="#000"/>
+      </svg>
+    `),
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
+  });
+
+  const oldPickupIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
+        <path d="M12 0 C7 0 3 4 3 9 C3 14 12 24 12 24 S21 14 21 9 C21 4 17 0 12 0 Z" fill="#FF3B30" stroke="#000" stroke-width="1.5" opacity="0.5"/>
+        <line x1="7" y1="5" x2="17" y2="13" stroke="#fff" stroke-width="2"/>
+        <line x1="17" y1="5" x2="7" y2="13" stroke="#fff" stroke-width="2"/>
+      </svg>
+    `),
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
+  });
+
+  const newPickupIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
+        <path d="M14 0 C8 0 3 5 3 11 C3 17 14 28 14 28 S25 17 25 11 C25 5 20 0 14 0 Z" fill="#39FF14" stroke="#000" stroke-width="2"/>
+        <circle cx="14" cy="11" r="5" fill="#000"/>
+      </svg>
+    `),
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+  });
+
+  // San Francisco coordinates (Civic Center area)
+  const mapCenter = [37.7797, -122.4184];
+  const vehiclePosition = [37.7797, -122.4184];
+  const passengerPosition = currentTicket?.scenario === 'pickup_mismatch'
+    ? [37.7785, -122.4195]
+    : [37.7805, -122.4170];
+  const oldPickupPosition = [37.7810, -122.4165];
 
   const getPriorityColor = (priority) => {
     switch(priority) {
@@ -711,161 +780,80 @@ const RemoteAssistanceConsole = () => {
           </div>
 
           {/* Map (30%) */}
-          <div 
+          <div
             style={{
               width: '30%',
               height: '100%',
               backgroundColor: '#0f0f0f',
               position: 'relative',
               borderLeft: '1px solid #2d2d2d',
-              cursor: interventionMode === 'relocate' ? 'crosshair' : 'default'
-            }}
-            onClick={(e) => {
-              if (interventionMode === 'relocate') {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                const y = ((e.clientY - rect.top) / rect.height) * 100;
-                setNewPickupLocation({ x: `${x}%`, y: `${y}%` });
-              }
             }}
           >
-            {/* Map grid */}
-            <div style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              backgroundImage: `
-                linear-gradient(rgba(57, 255, 20, 0.08) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(57, 255, 20, 0.08) 1px, transparent 1px)
-              `,
-              backgroundSize: '30px 30px'
-            }} />
+            <MapContainer
+              center={mapCenter}
+              zoom={16}
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
 
-            {/* Streets */}
-            <svg style={{ position: 'absolute', width: '100%', height: '100%' }}>
-              <line x1="10%" y1="20%" x2="10%" y2="80%" stroke="#2d2d2d" strokeWidth="50" />
-              <line x1="10%" y1="50%" x2="90%" y2="50%" stroke="#2d2d2d" strokeWidth="40" />
-              {currentTicket?.scenario === 'construction' && (
-                <rect x="5%" y="35%" width="10%" height="20%" fill="rgba(255, 149, 0, 0.2)" stroke="#FF9500" strokeWidth="2" strokeDasharray="5,5" />
+              {/* Map click handler for relocate mode */}
+              <MapClickHandler
+                interventionMode={interventionMode}
+                onMapClick={(latlng) => setNewPickupLocation(latlng)}
+              />
+
+              {/* Vehicle marker */}
+              <Marker position={vehiclePosition} icon={vehicleIcon}>
+                <Popup>
+                  <div style={{ color: '#000' }}>
+                    <strong>{currentTicket?.vehicleId}</strong><br/>
+                    Status: {currentTicket?.status}
+                  </div>
+                </Popup>
+              </Marker>
+
+              {/* Passenger marker */}
+              {currentTicket?.context === 'Pax Waiting' && (
+                <Marker position={passengerPosition} icon={passengerIcon}>
+                  <Popup>
+                    <div style={{ color: '#000' }}>
+                      <strong>Passenger</strong><br/>
+                      Waiting for pickup
+                    </div>
+                  </Popup>
+                </Marker>
               )}
-            </svg>
 
-            {/* Vehicle */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '10%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 10
-            }}>
-              <div style={{
-                width: '20px',
-                height: '20px',
-                backgroundColor: '#39FF14',
-                borderRadius: '50%',
-                boxShadow: '0 0 20px #39FF14',
-                position: 'relative'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '0',
-                  height: '0',
-                  borderLeft: '4px solid transparent',
-                  borderRight: '4px solid transparent',
-                  borderBottom: '6px solid #39FF14'
-                }} />
-              </div>
-            </div>
+              {/* Old pickup pin */}
+              {(interventionMode === 'relocate' || currentTicket?.scenario === 'pickup_mismatch') && currentTicket?.context === 'Pax Waiting' && (
+                <Marker position={oldPickupPosition} icon={oldPickupIcon}>
+                  <Popup>
+                    <div style={{ color: '#000' }}>
+                      <strong>Old Pickup Location</strong><br/>
+                      Incorrect pin placement
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
 
-            {/* Passenger */}
-            {currentTicket?.context === 'Pax Waiting' && (
-              <div style={{
-                position: 'absolute',
-                top: currentTicket?.scenario === 'pickup_mismatch' ? '70%' : '50%',
-                left: currentTicket?.scenario === 'pickup_mismatch' ? '5%' : '60%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10
-              }}>
-                <MapPin size={24} color="#FF9500" fill="#FF9500" />
-                <div style={{
-                  backgroundColor: '#FF9500',
-                  color: '#000000',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  marginTop: '4px'
-                }}>
-                  Passenger
-                </div>
-              </div>
-            )}
+              {/* New pickup location */}
+              {interventionMode === 'relocate' && newPickupLocation && (
+                <Marker position={newPickupLocation} icon={newPickupIcon}>
+                  <Popup>
+                    <div style={{ color: '#000' }}>
+                      <strong>New Pickup Location</strong><br/>
+                      Click "Send Command" to update
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+            </MapContainer>
 
-            {/* Old pickup pin */}
-            {(interventionMode === 'relocate' || currentTicket?.scenario === 'pickup_mismatch') && currentTicket?.context === 'Pax Waiting' && (
-              <div style={{
-                position: 'absolute',
-                top: '30%',
-                left: '65%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 9
-              }}>
-                <MapPin size={24} color="#FF3B30" fill="#FF3B30" opacity={0.5} />
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  color: '#ffffff',
-                  fontSize: '16px',
-                  fontWeight: 900
-                }}>
-                  ✕
-                </div>
-                <div style={{
-                  backgroundColor: 'rgba(255, 59, 48, 0.7)',
-                  color: '#ffffff',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  textDecoration: 'line-through',
-                  marginTop: '4px'
-                }}>
-                  Old Pin
-                </div>
-              </div>
-            )}
-
-            {/* New pickup */}
-            {interventionMode === 'relocate' && newPickupLocation && (
-              <div style={{
-                position: 'absolute',
-                top: newPickupLocation.y,
-                left: newPickupLocation.x,
-                transform: 'translate(-50%, -50%)',
-                zIndex: 11,
-                animation: 'pulse 2s infinite'
-              }}>
-                <MapPin size={28} color="#39FF14" fill="#39FF14" />
-                <div style={{
-                  backgroundColor: '#39FF14',
-                  color: '#000000',
-                  padding: '3px 8px',
-                  borderRadius: '3px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  border: '2px solid #000000',
-                  marginTop: '4px'
-                }}>
-                  New Pickup
-                </div>
-              </div>
-            )}
-
+            {/* Clear pin button */}
             {interventionMode === 'relocate' && newPickupLocation && (
               <button
                 onClick={(e) => {
@@ -884,7 +872,7 @@ const RemoteAssistanceConsole = () => {
                   fontSize: '10px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  zIndex: 15
+                  zIndex: 1000
                 }}
               >
                 Clear Pin
@@ -896,21 +884,22 @@ const RemoteAssistanceConsole = () => {
               position: 'absolute',
               top: '12px',
               left: '12px',
-              right: '12px',
+              right: interventionMode === 'relocate' && newPickupLocation ? '100px' : '12px',
               backgroundColor: 'rgba(0, 0, 0, 0.8)',
               padding: '8px 10px',
               borderRadius: '6px',
               fontSize: '10px',
               borderLeft: '3px solid #39FF14',
-              zIndex: 10
+              zIndex: 1000,
+              pointerEvents: 'none'
             }}>
               <div style={{ fontWeight: 600, marginBottom: '2px' }}>
                 {currentTicket?.location}
               </div>
               <div style={{ fontSize: '9px', color: interventionMode === 'relocate' ? '#39FF14' : '#8e8e93' }}>
-                {interventionMode === 'relocate' ? 'Click to set pickup location' : 
+                {interventionMode === 'relocate' ? 'Click map to set pickup location' :
                  currentTicket?.context === 'Pax Waiting' ? 'En route to pickup' :
-                 currentTicket?.context === 'Pax Onboard' ? 'En route to destination' : 
+                 currentTicket?.context === 'Pax Onboard' ? 'En route to destination' :
                  'Autonomous navigation'}
               </div>
             </div>
@@ -926,7 +915,8 @@ const RemoteAssistanceConsole = () => {
               borderRadius: '6px',
               fontSize: '9px',
               lineHeight: '1.6',
-              zIndex: 10
+              zIndex: 1000,
+              pointerEvents: 'none'
             }}>
               <div style={{ fontWeight: 600, marginBottom: '6px', color: '#8e8e93', textTransform: 'uppercase' }}>
                 Map Legend
