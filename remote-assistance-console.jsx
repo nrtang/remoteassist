@@ -1,0 +1,1348 @@
+import React, { useState } from 'react';
+import { MapPin, Radio, Zap, AlertCircle, Users, User, Navigation, Eye, Package } from 'lucide-react';
+
+const RemoteAssistanceConsole = () => {
+  const [selectedTicket, setSelectedTicket] = useState('AV-2847');
+  const [interventionMode, setInterventionMode] = useState('draw');
+  const [selectedReason, setSelectedReason] = useState('');
+  const [activeCamera, setActiveCamera] = useState('front');
+  const [pathPoints, setPathPoints] = useState([]);
+  const [selectedNudgeAction, setSelectedNudgeAction] = useState('');
+  const [newPickupLocation, setNewPickupLocation] = useState(null);
+  const [isFleetMode, setIsFleetMode] = useState(false);
+  const [selectedMapAction, setSelectedMapAction] = useState(null);
+
+  const tickets = [
+    { 
+      id: 'AV-2847', 
+      vehicleId: 'RT-4521', 
+      timeStalled: '00:45', 
+      priority: 'high',
+      context: 'Pax Waiting',
+      status: 'Pickup Location Issue',
+      assignedTo: 'You',
+      assignedOperator: 'Sarah K.',
+      scenario: 'pickup_mismatch',
+      issue: 'Pax unable to locate vehicle',
+      location: 'Civic Center Plaza',
+      notes: 'Pin shows north side, vehicle on south entrance'
+    },
+    { 
+      id: 'AV-2848', 
+      vehicleId: 'RT-3309', 
+      timeStalled: '00:12', 
+      priority: 'medium',
+      context: 'Pax Waiting',
+      status: 'Complex Navigation',
+      assignedTo: 'other',
+      assignedOperator: 'Mike T.',
+      scenario: 'construction',
+      issue: 'Construction zone - needs routing',
+      location: '5th St between Market & Mission',
+      notes: 'Multiple lane closures, unclear detour signage'
+    },
+    { 
+      id: 'AV-2849', 
+      vehicleId: 'ND-7856', 
+      timeStalled: '02:34', 
+      priority: 'low',
+      context: 'Empty',
+      status: 'Route Blocked',
+      assignedTo: null,
+      assignedOperator: null,
+      scenario: 'event_closure',
+      issue: 'Street closed - marathon event',
+      location: 'Embarcadero & Bay St',
+      notes: 'City marathon in progress, road closure until 2pm'
+    },
+    { 
+      id: 'AV-2850', 
+      vehicleId: 'RT-2190', 
+      timeStalled: '00:08', 
+      priority: 'high',
+      context: 'Pax Onboard',
+      status: 'Traffic Merge',
+      assignedTo: null,
+      assignedOperator: null,
+      scenario: 'traffic',
+      issue: 'Unable to merge into traffic',
+      location: 'I-280 Onramp at King St',
+      notes: 'Heavy traffic, waiting for safe merge opportunity'
+    }
+  ];
+
+  const reasons = [
+    'Construction Zone',
+    'Road Debris',
+    'Unclear Lane Markings',
+    'Event Closure (Marathon/Parade)',
+    'Pickup Location Mismatch',
+    'Narrow Passage',
+    'Heavy Traffic Merge',
+    'Other Obstruction'
+  ];
+
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'high': return '#FF3B30';
+      case 'medium': return '#FF9500';
+      case 'low': return '#5AC8FA';
+      default: return '#8E8E93';
+    }
+  };
+
+  const getContextColor = (context) => {
+    if (context === 'Pax Onboard') return '#FF3B30';
+    if (context === 'Pax Waiting') return '#FF9500';
+    if (context === 'Delivery') return '#5AC8FA';
+    return '#8E8E93';
+  };
+
+  const currentTicket = tickets.find(t => t.id === selectedTicket);
+
+  const handleSendCommand = () => {
+    if (isFleetMode && selectedMapAction) {
+      const actionNames = {
+        'road_closure': 'mark this road as CLOSED',
+        'hazard': 'report a HAZARD on this road',
+        'construction': 'mark this area as a CONSTRUCTION ZONE'
+      };
+      const confirmed = window.confirm(
+        `⚠️ FLEET-WIDE CHANGE\n\n` +
+        `You are about to ${actionNames[selectedMapAction]}.\n\n` +
+        `This will affect 12 other vehicles in the fleet.\n\n` +
+        `Reason: ${selectedReason}\n\n` +
+        `Are you sure you want to proceed?`
+      );
+      if (confirmed) {
+        alert(`✓ Fleet map updated: ${selectedMapAction}\n12 vehicles rerouted`);
+        setSelectedMapAction(null);
+      }
+    } else if (interventionMode === 'draw' && pathPoints.length > 0) {
+      alert(`Sending path with ${pathPoints.length} waypoints to ${currentTicket?.vehicleId}`);
+      setPathPoints([]);
+    } else if (interventionMode === 'nudge' && selectedNudgeAction) {
+      const actionNames = {
+        'pull_over': 'Pull Over Safely',
+        'proceed_slowly': 'Proceed Slowly (5 mph)',
+        'wait': 'Wait for Clear Signal',
+        'resume': 'Resume Normal Speed',
+        'move_left': 'Move Left 2 ft',
+        'move_right': 'Move Right 2 ft'
+      };
+      alert(`Sending "${actionNames[selectedNudgeAction]}" to ${currentTicket?.vehicleId}`);
+      setSelectedNudgeAction('');
+    } else if (interventionMode === 'relocate' && newPickupLocation) {
+      alert(`Updating pickup pin for ${currentTicket?.vehicleId}`);
+      setNewPickupLocation(null);
+    }
+  };
+
+  return (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#1a1a1a',
+      display: 'flex',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      color: '#ffffff',
+      overflow: 'hidden'
+    }}>
+      
+      {/* Column 1: Queue (20%) */}
+      <div style={{
+        width: '20%',
+        borderRight: '1px solid #2d2d2d',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          padding: '20px',
+          borderBottom: '1px solid #2d2d2d',
+          backgroundColor: '#0f0f0f'
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '16px',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Radio size={18} color="#39FF14" />
+            Active Interventions
+          </h2>
+          <div style={{
+            marginTop: '8px',
+            fontSize: '12px',
+            color: '#8e8e93',
+            display: 'flex',
+            gap: '12px'
+          }}>
+            <span>{tickets.filter(t => !t.assignedTo).length} open</span>
+            <span style={{ color: '#5e5e5e' }}>•</span>
+            <span>{tickets.filter(t => t.assignedTo === 'You').length} yours</span>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {tickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              onClick={() => setSelectedTicket(ticket.id)}
+              style={{
+                padding: '16px',
+                borderBottom: '1px solid #2d2d2d',
+                cursor: 'pointer',
+                backgroundColor: selectedTicket === ticket.id ? '#2d2d2d' : 'transparent',
+                borderLeft: selectedTicket === ticket.id ? '3px solid #39FF14' : '3px solid transparent',
+                transition: 'all 0.2s ease',
+                opacity: ticket.assignedTo === 'other' ? 0.6 : 1
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '8px'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'monospace' }}>
+                  {ticket.vehicleId}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: ticket.timeStalled.startsWith('00:0') ? '#FF9500' : '#FF3B30',
+                  fontFamily: 'monospace'
+                }}>
+                  {ticket.timeStalled}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '10px',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: getContextColor(ticket.context),
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  {ticket.context === 'Pax Onboard' ? <Users size={10} /> : 
+                   ticket.context === 'Pax Waiting' ? <User size={10} /> :
+                   ticket.context === 'Delivery' ? <Package size={10} /> : null}
+                  {ticket.context}
+                </span>
+                
+                {ticket.assignedTo === 'You' && (
+                  <span style={{
+                    fontSize: '10px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#39FF14',
+                    color: '#000000',
+                    fontWeight: 600
+                  }}>
+                    Yours
+                  </span>
+                )}
+                {ticket.assignedTo === 'other' && (
+                  <span style={{
+                    fontSize: '10px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#5E5E5E',
+                    color: '#ffffff',
+                    fontWeight: 600
+                  }}>
+                    {ticket.assignedOperator}
+                  </span>
+                )}
+                {!ticket.assignedTo && (
+                  <span style={{
+                    fontSize: '10px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #5AC8FA',
+                    color: '#5AC8FA',
+                    fontWeight: 600
+                  }}>
+                    Open
+                  </span>
+                )}
+              </div>
+
+              <div style={{
+                fontSize: '11px',
+                color: '#8e8e93',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: getPriorityColor(ticket.priority)
+                }} />
+                {ticket.status}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Column 2: Stage (60%) */}
+      <div style={{
+        width: '60%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {/* Status Bar */}
+        <div style={{
+          padding: '16px 24px',
+          backgroundColor: '#FF3B30',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertCircle size={20} />
+            <span style={{ fontWeight: 600, fontSize: '14px' }}>
+              Vehicle State: Paused - {currentTicket?.status}
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            fontSize: '12px',
+            fontFamily: 'monospace'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '4px'
+            }}>
+              <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: '#39FF14',
+                boxShadow: '0 0 6px #39FF14'
+              }} />
+              <span>47ms</span>
+            </div>
+            <span>{currentTicket?.vehicleId} • {currentTicket?.timeStalled} elapsed</span>
+          </div>
+        </div>
+
+        {/* Context Panel */}
+        {currentTicket && (
+          <div style={{
+            padding: '12px 24px',
+            backgroundColor: '#2d2d2d',
+            borderBottom: '1px solid #3d3d3d',
+            display: 'flex',
+            gap: '20px',
+            fontSize: '12px'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#8e8e93', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}>
+                Issue
+              </div>
+              <div style={{ color: '#ffffff', fontWeight: 500 }}>
+                {currentTicket.issue}
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#8e8e93', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}>
+                Location
+              </div>
+              <div style={{ color: '#ffffff', fontWeight: 500 }}>
+                {currentTicket.location}
+              </div>
+            </div>
+            <div style={{ flex: 1.5 }}>
+              <div style={{ color: '#8e8e93', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}>
+                Notes
+              </div>
+              <div style={{ color: '#FF9500', fontWeight: 500, fontStyle: 'italic' }}>
+                {currentTicket.notes}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Camera Selector */}
+        <div style={{
+          padding: '12px 24px',
+          backgroundColor: '#0f0f0f',
+          borderBottom: '1px solid #2d2d2d',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            fontSize: '11px',
+            color: '#8e8e93',
+            marginRight: '8px',
+            textTransform: 'uppercase',
+            fontWeight: 600
+          }}>
+            Camera:
+          </div>
+          {['front', 'rear', 'left', 'right', 'interior'].map((camera) => (
+            <button
+              key={camera}
+              onClick={() => setActiveCamera(camera)}
+              style={{
+                padding: '6px 14px',
+                backgroundColor: activeCamera === camera ? '#39FF14' : '#2d2d2d',
+                color: activeCamera === camera ? '#000000' : '#ffffff',
+                border: activeCamera === camera ? 'none' : '1px solid #3d3d3d',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textTransform: 'capitalize',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {camera}
+            </button>
+          ))}
+          <div style={{
+            marginLeft: 'auto',
+            fontSize: '10px',
+            color: '#8e8e93',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <div style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: '#FF3B30',
+              animation: 'pulse 2s infinite'
+            }} />
+            All cameras live
+          </div>
+        </div>
+
+        {/* Video Feed + Map */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          gap: '1px',
+          backgroundColor: '#0f0f0f',
+          overflow: 'hidden'
+        }}>
+          {/* Video Feed (70%) */}
+          <div style={{
+            width: '70%',
+            height: '100%',
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {/* Breadcrumb Waypoints */}
+            {interventionMode === 'draw' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  cursor: 'crosshair',
+                  zIndex: 20
+                }}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  setPathPoints(prev => [...prev, { x, y }]);
+                }}
+              >
+                <svg style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none'
+                }}>
+                  {pathPoints.map((point, i) => {
+                    if (i === 0) return null;
+                    return (
+                      <line
+                        key={i}
+                        x1={pathPoints[i-1].x}
+                        y1={pathPoints[i-1].y}
+                        x2={point.x}
+                        y2={point.y}
+                        stroke="#39FF14"
+                        strokeWidth="3"
+                        strokeDasharray="8,4"
+                        opacity="0.7"
+                      />
+                    );
+                  })}
+                </svg>
+
+                {pathPoints.map((point, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      position: 'absolute',
+                      left: point.x,
+                      top: point.y,
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{
+                      width: i === 0 || i === pathPoints.length - 1 ? '24px' : '16px',
+                      height: i === 0 || i === pathPoints.length - 1 ? '24px' : '16px',
+                      backgroundColor: '#39FF14',
+                      border: '3px solid #000000',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      color: '#000000',
+                      boxShadow: '0 0 12px rgba(57, 255, 20, 0.6)'
+                    }}>
+                      {i + 1}
+                    </div>
+                    {i === 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-24px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: '#39FF14',
+                        color: '#000000',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        START
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {interventionMode === 'draw' && pathPoints.length === 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(57, 255, 20, 0.95)',
+                color: '#000000',
+                padding: '16px 24px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                textAlign: 'center',
+                zIndex: 15,
+                pointerEvents: 'none',
+                border: '2px solid #000000'
+              }}>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>📍</div>
+                Click to place waypoints
+              </div>
+            )}
+
+            {interventionMode === 'draw' && pathPoints.length > 0 && (
+              <button
+                onClick={() => setPathPoints([])}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  padding: '8px 16px',
+                  backgroundColor: '#FF3B30',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  zIndex: 25
+                }}
+              >
+                🗑️ Clear
+              </button>
+            )}
+
+            {/* Camera indicator */}
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '12px',
+              zIndex: 10
+            }}>
+              <Eye size={14} color="#39FF14" />
+              <span style={{ textTransform: 'capitalize' }}>{activeCamera} Camera • Live</span>
+            </div>
+
+            {/* Center placeholder */}
+            <div style={{ textAlign: 'center', opacity: 0.3, zIndex: 1 }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>
+                {activeCamera === 'front' ? '📹' :
+                 activeCamera === 'rear' ? '🔄' :
+                 activeCamera === 'left' ? '⬅️' :
+                 activeCamera === 'right' ? '➡️' : '👁️'}
+              </div>
+              <div style={{ fontSize: '14px', color: '#8e8e93', textTransform: 'capitalize' }}>
+                {activeCamera} Camera Feed
+              </div>
+            </div>
+
+            {/* Scenario overlays */}
+            {activeCamera === 'front' && currentTicket?.scenario === 'construction' && (
+              <>
+                <div style={{
+                  position: 'absolute',
+                  top: '35%',
+                  left: '25%',
+                  width: '150px',
+                  height: '80px',
+                  border: '2px solid #FF9500',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                  zIndex: 5
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '-20px',
+                    left: '0',
+                    backgroundColor: '#FF9500',
+                    padding: '2px 8px',
+                    borderRadius: '3px',
+                    fontSize: '10px',
+                    fontWeight: 600
+                  }}>
+                    Barrier
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeCamera === 'front' && currentTicket?.scenario === 'event_closure' && (
+              <div style={{
+                position: 'absolute',
+                top: '30%',
+                left: '10%',
+                right: '10%',
+                height: '100px',
+                border: '3px solid #FF3B30',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 59, 48, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '8px',
+                zIndex: 5
+              }}>
+                <div style={{ fontSize: '32px' }}>🚧</div>
+                <div style={{
+                  backgroundColor: '#FF3B30',
+                  padding: '6px 16px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase'
+                }}>
+                  Road Closed - Marathon
+                </div>
+              </div>
+            )}
+
+            {/* Detection Info */}
+            <div style={{
+              position: 'absolute',
+              bottom: '20px',
+              left: '20px',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: '12px 16px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              borderLeft: '3px solid #39FF14',
+              zIndex: 10
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '6px' }}>
+                {activeCamera === 'front' ? 'LiDAR Detection: Active' : 
+                 activeCamera === 'interior' ? 'Interior Monitoring' : 
+                 `${activeCamera} Sensors: Active`}
+              </div>
+              <div style={{ color: '#8e8e93' }}>
+                {currentTicket?.scenario === 'construction' && '2 obstacles detected'}
+                {currentTicket?.scenario === 'pickup_mismatch' && 'Check map for location'}
+                {currentTicket?.scenario === 'event_closure' && 'Road closure detected'}
+              </div>
+            </div>
+          </div>
+
+          {/* Map (30%) */}
+          <div 
+            style={{
+              width: '30%',
+              height: '100%',
+              backgroundColor: '#0f0f0f',
+              position: 'relative',
+              borderLeft: '1px solid #2d2d2d',
+              cursor: interventionMode === 'relocate' ? 'crosshair' : 'default'
+            }}
+            onClick={(e) => {
+              if (interventionMode === 'relocate') {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setNewPickupLocation({ x: `${x}%`, y: `${y}%` });
+              }
+            }}
+          >
+            {/* Map grid */}
+            <div style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              backgroundImage: `
+                linear-gradient(rgba(57, 255, 20, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(57, 255, 20, 0.08) 1px, transparent 1px)
+              `,
+              backgroundSize: '30px 30px'
+            }} />
+
+            {/* Streets */}
+            <svg style={{ position: 'absolute', width: '100%', height: '100%' }}>
+              <line x1="10%" y1="20%" x2="10%" y2="80%" stroke="#2d2d2d" strokeWidth="50" />
+              <line x1="10%" y1="50%" x2="90%" y2="50%" stroke="#2d2d2d" strokeWidth="40" />
+              {currentTicket?.scenario === 'construction' && (
+                <rect x="5%" y="35%" width="10%" height="20%" fill="rgba(255, 149, 0, 0.2)" stroke="#FF9500" strokeWidth="2" strokeDasharray="5,5" />
+              )}
+            </svg>
+
+            {/* Vehicle */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '10%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10
+            }}>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                backgroundColor: '#39FF14',
+                borderRadius: '50%',
+                boxShadow: '0 0 20px #39FF14',
+                position: 'relative'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '0',
+                  height: '0',
+                  borderLeft: '4px solid transparent',
+                  borderRight: '4px solid transparent',
+                  borderBottom: '6px solid #39FF14'
+                }} />
+              </div>
+            </div>
+
+            {/* Passenger */}
+            {currentTicket?.context === 'Pax Waiting' && (
+              <div style={{
+                position: 'absolute',
+                top: currentTicket?.scenario === 'pickup_mismatch' ? '70%' : '50%',
+                left: currentTicket?.scenario === 'pickup_mismatch' ? '5%' : '60%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10
+              }}>
+                <MapPin size={24} color="#FF9500" fill="#FF9500" />
+                <div style={{
+                  backgroundColor: '#FF9500',
+                  color: '#000000',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  marginTop: '4px'
+                }}>
+                  Passenger
+                </div>
+              </div>
+            )}
+
+            {/* Old pickup pin */}
+            {(interventionMode === 'relocate' || currentTicket?.scenario === 'pickup_mismatch') && currentTicket?.context === 'Pax Waiting' && (
+              <div style={{
+                position: 'absolute',
+                top: '30%',
+                left: '65%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 9
+              }}>
+                <MapPin size={24} color="#FF3B30" fill="#FF3B30" opacity={0.5} />
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  fontWeight: 900
+                }}>
+                  ✕
+                </div>
+                <div style={{
+                  backgroundColor: 'rgba(255, 59, 48, 0.7)',
+                  color: '#ffffff',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  textDecoration: 'line-through',
+                  marginTop: '4px'
+                }}>
+                  Old Pin
+                </div>
+              </div>
+            )}
+
+            {/* New pickup */}
+            {interventionMode === 'relocate' && newPickupLocation && (
+              <div style={{
+                position: 'absolute',
+                top: newPickupLocation.y,
+                left: newPickupLocation.x,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 11,
+                animation: 'pulse 2s infinite'
+              }}>
+                <MapPin size={28} color="#39FF14" fill="#39FF14" />
+                <div style={{
+                  backgroundColor: '#39FF14',
+                  color: '#000000',
+                  padding: '3px 8px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  border: '2px solid #000000',
+                  marginTop: '4px'
+                }}>
+                  New Pickup
+                </div>
+              </div>
+            )}
+
+            {interventionMode === 'relocate' && newPickupLocation && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNewPickupLocation(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  padding: '6px 12px',
+                  backgroundColor: '#FF3B30',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  zIndex: 15
+                }}
+              >
+                Clear Pin
+              </button>
+            )}
+
+            {/* Location label */}
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              right: '12px',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontSize: '10px',
+              borderLeft: '3px solid #39FF14',
+              zIndex: 10
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '2px' }}>
+                {currentTicket?.location}
+              </div>
+              <div style={{ fontSize: '9px', color: interventionMode === 'relocate' ? '#39FF14' : '#8e8e93' }}>
+                {interventionMode === 'relocate' ? 'Click to set pickup location' : 
+                 currentTicket?.context === 'Pax Waiting' ? 'En route to pickup' :
+                 currentTicket?.context === 'Pax Onboard' ? 'En route to destination' : 
+                 'Autonomous navigation'}
+              </div>
+            </div>
+
+            {/* Map legend */}
+            <div style={{
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              right: '12px',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: '10px',
+              borderRadius: '6px',
+              fontSize: '9px',
+              lineHeight: '1.6',
+              zIndex: 10
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '6px', color: '#8e8e93', textTransform: 'uppercase' }}>
+                Map Legend
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '8px', height: '8px', backgroundColor: '#39FF14', borderRadius: '50%' }} />
+                  <span style={{ color: '#ffffff' }}>Vehicle</span>
+                </div>
+                {currentTicket?.context === 'Pax Waiting' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: '#FF9500', borderRadius: '50%' }} />
+                    <span style={{ color: '#ffffff' }}>Passenger</span>
+                  </div>
+                )}
+                {interventionMode === 'relocate' && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '8px', height: '8px', backgroundColor: '#FF3B30', borderRadius: '50%', opacity: 0.5 }} />
+                      <span style={{ color: '#ffffff', textDecoration: 'line-through' }}>Old Pin</span>
+                    </div>
+                    {newPickupLocation && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '8px', height: '8px', backgroundColor: '#39FF14', borderRadius: '50%' }} />
+                        <span style={{ color: '#39FF14', fontWeight: 600 }}>New Pin</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Column 3: Controls (20%) */}
+      <div style={{
+        width: '20%',
+        borderLeft: isFleetMode ? '3px solid #FF3B30' : '1px solid #2d2d2d',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        backgroundColor: isFleetMode ? '#1a0a0a' : 'transparent'
+      }}>
+        {/* Fleet Mode Toggle */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #2d2d2d',
+          backgroundColor: isFleetMode ? '#2d1010' : '#0f0f0f'
+        }}>
+          <h3 style={{
+            margin: '0 0 12px 0',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: '#8e8e93',
+            textTransform: 'uppercase'
+          }}>
+            Control Scope
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <button
+              onClick={() => {
+                setIsFleetMode(false);
+                setSelectedMapAction(null);
+              }}
+              style={{
+                padding: '8px 10px',
+                backgroundColor: !isFleetMode ? '#5AC8FA' : '#2d2d2d',
+                color: !isFleetMode ? '#000000' : '#ffffff',
+                border: !isFleetMode ? '2px solid #000000' : '1px solid #3d3d3d',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              🚗 Vehicle
+            </button>
+            <button
+              onClick={() => setIsFleetMode(true)}
+              style={{
+                padding: '8px 10px',
+                backgroundColor: isFleetMode ? '#FF3B30' : '#2d2d2d',
+                color: '#ffffff',
+                border: isFleetMode ? '2px solid #000000' : '1px solid #3d3d3d',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              🗺️ Fleet
+            </button>
+          </div>
+          {isFleetMode && (
+            <div style={{
+              marginTop: '10px',
+              padding: '8px',
+              backgroundColor: 'rgba(255, 59, 48, 0.2)',
+              border: '1px solid #FF3B30',
+              borderRadius: '4px',
+              fontSize: '9px',
+              color: '#FF9500',
+              fontWeight: 600
+            }}>
+              ⚠️ FLEET MODE: Affects ALL vehicles
+            </div>
+          )}
+        </div>
+
+        {/* Vehicle Mode Tools */}
+        {!isFleetMode && (
+          <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#8e8e93',
+              textTransform: 'uppercase'
+            }}>
+              Vehicle Commands
+            </h3>
+
+            {/* Mode buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+              <button
+                onClick={() => {
+                  setInterventionMode('draw');
+                  setSelectedNudgeAction('');
+                  setNewPickupLocation(null);
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundColor: interventionMode === 'draw' ? '#39FF14' : '#2d2d2d',
+                  color: interventionMode === 'draw' ? '#000000' : '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Navigation size={14} />
+                <div style={{ fontSize: '10px', marginTop: '2px' }}>Draw Path</div>
+              </button>
+              <button
+                onClick={() => {
+                  setInterventionMode('nudge');
+                  setPathPoints([]);
+                  setNewPickupLocation(null);
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundColor: interventionMode === 'nudge' ? '#39FF14' : '#2d2d2d',
+                  color: interventionMode === 'nudge' ? '#000000' : '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Zap size={14} />
+                <div style={{ fontSize: '10px', marginTop: '2px' }}>Nudge</div>
+              </button>
+              <button
+                onClick={() => {
+                  setInterventionMode('relocate');
+                  setPathPoints([]);
+                  setSelectedNudgeAction('');
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundColor: interventionMode === 'relocate' ? '#39FF14' : '#2d2d2d',
+                  color: interventionMode === 'relocate' ? '#000000' : '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  gridColumn: 'span 2'
+                }}
+              >
+                <MapPin size={14} />
+                <div style={{ fontSize: '10px', marginTop: '2px' }}>Relocate Pickup</div>
+              </button>
+            </div>
+
+            {/* Nudge actions */}
+            {interventionMode === 'nudge' && (
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#8e8e93',
+                  textTransform: 'uppercase'
+                }}>
+                  Select Action
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { id: 'pull_over', label: 'Pull Over Safely', icon: '🛑' },
+                    { id: 'proceed_slowly', label: 'Proceed Slowly (5 mph)', icon: '🐌' },
+                    { id: 'wait', label: 'Wait for Clear Signal', icon: '⏸️' },
+                    { id: 'resume', label: 'Resume Normal Speed', icon: '▶️' },
+                    { id: 'move_left', label: 'Move Left 2 ft', icon: '⬅️' },
+                    { id: 'move_right', label: 'Move Right 2 ft', icon: '➡️' }
+                  ].map(action => (
+                    <button
+                      key={action.id}
+                      onClick={() => setSelectedNudgeAction(action.id)}
+                      style={{
+                        padding: '10px 12px',
+                        backgroundColor: selectedNudgeAction === action.id ? '#39FF14' : '#2d2d2d',
+                        color: selectedNudgeAction === action.id ? '#000000' : '#ffffff',
+                        border: selectedNudgeAction === action.id ? '2px solid #000000' : '1px solid #3d3d3d',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span>{action.icon}</span>
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reason dropdown */}
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#8e8e93',
+              textTransform: 'uppercase'
+            }}>
+              Incident Reason
+            </h3>
+            <select
+              value={selectedReason}
+              onChange={(e) => setSelectedReason(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#2d2d2d',
+                color: '#ffffff',
+                border: '1px solid #3d3d3d',
+                borderRadius: '6px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                marginBottom: '20px'
+              }}
+            >
+              <option value="">Select reason...</option>
+              {reasons.map(reason => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Fleet Mode Tools */}
+        {isFleetMode && (
+          <div style={{ padding: '20px', flex: 1 }}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#FF9500',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              ⚠️ Map Edits (All Vehicles)
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {[
+                { id: 'road_closure', label: 'Mark Road Closed', subtitle: 'Block segment for fleet', icon: '🚧' },
+                { id: 'hazard', label: 'Report Hazard', subtitle: 'Slow zone for all', icon: '⚠️' },
+                { id: 'construction', label: 'Construction Zone', subtitle: 'Reduce speed for all', icon: '🏗️' }
+              ].map(action => (
+                <button
+                  key={action.id}
+                  onClick={() => setSelectedMapAction(action.id)}
+                  style={{
+                    padding: '12px',
+                    backgroundColor: selectedMapAction === action.id ? '#FF3B30' : '#2d2d2d',
+                    color: '#ffffff',
+                    border: selectedMapAction === action.id ? '2px solid #000000' : '1px solid #3d3d3d',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>{action.icon}</span>
+                  <div>
+                    <div>{action.label}</div>
+                    <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>
+                      {action.subtitle}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Reason dropdown */}
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#8e8e93',
+              textTransform: 'uppercase'
+            }}>
+              Incident Reason
+            </h3>
+            <select
+              value={selectedReason}
+              onChange={(e) => setSelectedReason(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#2d2d2d',
+                color: '#ffffff',
+                border: '1px solid #3d3d3d',
+                borderRadius: '6px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                marginBottom: '20px'
+              }}
+            >
+              <option value="">Select reason...</option>
+              {reasons.map(reason => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Send button */}
+        <div style={{ padding: '20px', backgroundColor: '#0f0f0f' }}>
+          <button
+            disabled={!selectedReason || 
+                     (!isFleetMode && interventionMode === 'draw' && pathPoints.length === 0) || 
+                     (!isFleetMode && interventionMode === 'nudge' && !selectedNudgeAction) ||
+                     (!isFleetMode && interventionMode === 'relocate' && !newPickupLocation) ||
+                     (isFleetMode && !selectedMapAction)}
+            onClick={handleSendCommand}
+            style={{
+              width: '100%',
+              padding: '16px',
+              backgroundColor: (selectedReason && ((isFleetMode && selectedMapAction) || 
+                (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
+                (interventionMode === 'nudge' && selectedNudgeAction) ||
+                (interventionMode === 'relocate' && newPickupLocation))))) 
+                ? (isFleetMode ? '#FF3B30' : '#39FF14') : '#2d2d2d',
+              color: (selectedReason && ((isFleetMode && selectedMapAction) || 
+                (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
+                (interventionMode === 'nudge' && selectedNudgeAction) ||
+                (interventionMode === 'relocate' && newPickupLocation)))))
+                ? (isFleetMode ? '#ffffff' : '#000000') : '#666666',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 700,
+              cursor: (selectedReason && ((isFleetMode && selectedMapAction) || 
+                (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
+                (interventionMode === 'nudge' && selectedNudgeAction) ||
+                (interventionMode === 'relocate' && newPickupLocation))))) ? 'pointer' : 'not-allowed',
+              textTransform: 'uppercase'
+            }}
+          >
+            {isFleetMode ? '⚠️ Update Fleet Map' : 'Send Command'}
+          </button>
+          <div style={{
+            marginTop: '12px',
+            fontSize: '10px',
+            color: '#8e8e93',
+            textAlign: 'center'
+          }}>
+            {isFleetMode ? (selectedMapAction ? '⚠️ Requires confirmation' : 'Select action above') : 
+             !selectedReason ? 'Select reason first' : 
+             interventionMode === 'draw' && pathPoints.length === 0 ? 'Place waypoints on video' :
+             interventionMode === 'nudge' && !selectedNudgeAction ? 'Select action above' :
+             interventionMode === 'relocate' && !newPickupLocation ? 'Click map to set location' :
+             'Ready to send'}
+          </div>
+        </div>
+      </div>
+
+      {/* Styles */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        select option {
+          background-color: #2d2d2d;
+          color: #ffffff;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default RemoteAssistanceConsole;
