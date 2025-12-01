@@ -876,30 +876,152 @@ const RemoteAssistanceConsole = () => {
             {/* Scenario overlays */}
             {activeCamera === 'front' && currentTicket?.scenario === 'construction' && (
               <>
+                {/* Construction Flagger */}
                 <div style={{
                   position: 'absolute',
-                  top: '35%',
-                  left: '25%',
-                  width: '150px',
-                  height: '80px',
-                  border: '2px solid #FF9500',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(255, 149, 0, 0.1)',
-                  zIndex: 5
+                  bottom: '15%',
+                  left: '60%',
+                  zIndex: 5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
                 }}>
+                  {/* Flagger body */}
                   <div style={{
-                    position: 'absolute',
-                    top: '-20px',
-                    left: '0',
-                    backgroundColor: '#FF9500',
-                    padding: '2px 8px',
-                    borderRadius: '3px',
-                    fontSize: '10px',
-                    fontWeight: 600
+                    width: '40px',
+                    height: '60px',
+                    position: 'relative'
                   }}>
-                    Barrier
+                    {/* Head */}
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFD700',
+                      position: 'absolute',
+                      top: '0',
+                      left: '12px',
+                      border: '2px solid #FFA500'
+                    }} />
+                    {/* Body */}
+                    <div style={{
+                      width: '24px',
+                      height: '30px',
+                      backgroundColor: '#FF6B00',
+                      position: 'absolute',
+                      top: '18px',
+                      left: '8px',
+                      borderRadius: '4px'
+                    }} />
+                    {/* Arm with STOP sign */}
+                    <div style={{
+                      width: '30px',
+                      height: '3px',
+                      backgroundColor: '#FF6B00',
+                      position: 'absolute',
+                      top: '28px',
+                      left: '32px',
+                      transform: 'rotate(-20deg)'
+                    }} />
+                    {/* STOP sign */}
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      backgroundColor: '#FF3B30',
+                      border: '2px solid white',
+                      borderRadius: '2px',
+                      position: 'absolute',
+                      top: '18px',
+                      left: '58px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      transform: 'rotate(90deg)'
+                    }}>
+                      STOP
+                    </div>
+                    {/* Legs */}
+                    <div style={{
+                      width: '3px',
+                      height: '14px',
+                      backgroundColor: '#2C3E50',
+                      position: 'absolute',
+                      top: '48px',
+                      left: '14px'
+                    }} />
+                    <div style={{
+                      width: '3px',
+                      height: '14px',
+                      backgroundColor: '#2C3E50',
+                      position: 'absolute',
+                      top: '48px',
+                      left: '23px'
+                    }} />
+                  </div>
+                  {/* Label */}
+                  <div style={{
+                    backgroundColor: '#FF9500',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    marginTop: '4px',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Flagger
                   </div>
                 </div>
+
+                {/* Traffic Cones */}
+                {[
+                  { left: '20%', bottom: '25%' },
+                  { left: '30%', bottom: '30%' },
+                  { left: '40%', bottom: '32%' },
+                  { left: '50%', bottom: '30%' },
+                  { left: '75%', bottom: '20%' }
+                ].map((position, index) => (
+                  <div key={index} style={{
+                    position: 'absolute',
+                    ...position,
+                    width: '0',
+                    height: '0',
+                    borderLeft: '10px solid transparent',
+                    borderRight: '10px solid transparent',
+                    borderBottom: `24px solid #FF9500`,
+                    zIndex: 4
+                  }}>
+                    {/* Cone stripes */}
+                    <div style={{
+                      position: 'absolute',
+                      width: '16px',
+                      height: '3px',
+                      backgroundColor: 'white',
+                      left: '-8px',
+                      top: '8px'
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      width: '12px',
+                      height: '3px',
+                      backgroundColor: 'white',
+                      left: '-6px',
+                      top: '2px'
+                    }} />
+                    {/* Cone base */}
+                    <div style={{
+                      position: 'absolute',
+                      width: '24px',
+                      height: '4px',
+                      backgroundColor: '#333',
+                      left: '-12px',
+                      top: '24px',
+                      borderRadius: '2px'
+                    }} />
+                  </div>
+                ))}
               </>
             )}
 
