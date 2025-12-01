@@ -876,10 +876,10 @@ const RemoteAssistanceConsole = () => {
             {/* Scenario overlays */}
             {activeCamera === 'front' && currentTicket?.scenario === 'construction' && (
               <>
-                {/* Realistic construction scene photo */}
+                {/* Realistic construction scene photo - Road construction with lane closure */}
                 <img
-                  src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&q=80"
-                  alt="Construction flagger with traffic cones"
+                  src="https://images.unsplash.com/photo-1581092918484-8313c23de8c1?w=800&q=80"
+                  alt="Road construction with traffic cones and lane closure"
                   style={{
                     position: 'absolute',
                     top: 0,
