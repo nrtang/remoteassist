@@ -38,6 +38,7 @@ const RemoteAssistanceConsole = () => {
   // Quick Actions state
   const [waitForInstructions, setWaitForInstructions] = useState(false);
   const [hazardsOn, setHazardsOn] = useState(false);
+  const [pulledOver, setPulledOver] = useState(false);
 
   const tickets = [
     { 
@@ -234,10 +235,13 @@ const RemoteAssistanceConsole = () => {
         alert(`${!hazardsOn ? '🚨 Hazards ON' : '✓ Hazards OFF'} - ${currentTicket?.vehicleId}`);
         break;
       case 'pull_over':
-        alert(`🛑 Pull over safely command sent to ${currentTicket?.vehicleId}`);
+        setPulledOver(true);
+        alert(`🛑 Vehicle pulling over safely - ${currentTicket?.vehicleId}`);
         break;
       case 'resume_route':
-        alert(`🚗 Resume route command sent to ${currentTicket?.vehicleId}`);
+        setPulledOver(false);
+        setWaitForInstructions(false);
+        alert(`🚗 Resuming route - ${currentTicket?.vehicleId}`);
         break;
       case 'flash_lights':
         alert(`💡 Flash lights command sent to ${currentTicket?.vehicleId}`);
@@ -1179,44 +1183,62 @@ const RemoteAssistanceConsole = () => {
                 )}
               </button>
 
-              {/* Pull Over - Single action */}
+              {/* Pull Over - State-based */}
               <button
                 onClick={() => handleQuickAction('pull_over')}
+                disabled={pulledOver}
                 style={{
                   padding: '10px 8px',
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: pulledOver ? '#5AC8FA' : '#2d2d2d',
                   color: '#ffffff',
-                  border: '1px solid #3d3d3d',
+                  border: pulledOver ? '2px solid #000000' : '1px solid #3d3d3d',
                   borderRadius: '6px',
                   fontSize: '11px',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: pulledOver ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  position: 'relative',
+                  opacity: pulledOver ? 0.8 : 1
                 }}
               >
                 <span style={{ fontSize: '16px' }}>🛑</span>
                 <span>Pull Over</span>
+                {pulledOver && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#39FF14',
+                    borderRadius: '50%',
+                    border: '1px solid #000',
+                    boxShadow: '0 0 6px #39FF14'
+                  }} />
+                )}
               </button>
 
-              {/* Resume Route - Single action */}
+              {/* Resume Route - Clears pulled over and wait states */}
               <button
                 onClick={() => handleQuickAction('resume_route')}
+                disabled={!pulledOver && !waitForInstructions}
                 style={{
                   padding: '10px 8px',
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
-                  border: '1px solid #3d3d3d',
+                  backgroundColor: (pulledOver || waitForInstructions) ? '#39FF14' : '#2d2d2d',
+                  color: (pulledOver || waitForInstructions) ? '#000000' : '#ffffff',
+                  border: (pulledOver || waitForInstructions) ? '2px solid #000000' : '1px solid #3d3d3d',
                   borderRadius: '6px',
                   fontSize: '11px',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: (pulledOver || waitForInstructions) ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  opacity: (pulledOver || waitForInstructions) ? 1 : 0.5
                 }}
               >
                 <span style={{ fontSize: '16px' }}>🚗</span>
