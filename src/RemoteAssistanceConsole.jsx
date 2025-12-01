@@ -35,6 +35,10 @@ const RemoteAssistanceConsole = () => {
   const [isFleetMode, setIsFleetMode] = useState(false);
   const [selectedMapAction, setSelectedMapAction] = useState(null);
 
+  // Quick Actions state
+  const [waitForInstructions, setWaitForInstructions] = useState(false);
+  const [hazardsOn, setHazardsOn] = useState(false);
+
   const tickets = [
     { 
       id: 'AV-2847', 
@@ -212,6 +216,34 @@ const RemoteAssistanceConsole = () => {
     } else if (interventionMode === 'relocate' && newPickupLocation) {
       alert(`Updating pickup pin for ${currentTicket?.vehicleId}`);
       setNewPickupLocation(null);
+    }
+  };
+
+  // Quick Action handlers
+  const handleQuickAction = (action) => {
+    switch(action) {
+      case 'wait':
+        setWaitForInstructions(!waitForInstructions);
+        alert(`${!waitForInstructions ? '⏸️ Vehicle holding position' : '▶️ Vehicle released from hold'} - ${currentTicket?.vehicleId}`);
+        break;
+      case 'honk':
+        alert(`🔊 Honk sent to ${currentTicket?.vehicleId}`);
+        break;
+      case 'hazards':
+        setHazardsOn(!hazardsOn);
+        alert(`${!hazardsOn ? '🚨 Hazards ON' : '✓ Hazards OFF'} - ${currentTicket?.vehicleId}`);
+        break;
+      case 'pull_over':
+        alert(`🛑 Pull over safely command sent to ${currentTicket?.vehicleId}`);
+        break;
+      case 'resume_route':
+        alert(`🚗 Resume route command sent to ${currentTicket?.vehicleId}`);
+        break;
+      case 'flash_lights':
+        alert(`💡 Flash lights command sent to ${currentTicket?.vehicleId}`);
+        break;
+      default:
+        break;
     }
   };
 
@@ -1040,6 +1072,180 @@ const RemoteAssistanceConsole = () => {
         {/* Vehicle Mode Tools */}
         {!isFleetMode && (
           <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#8e8e93',
+              textTransform: 'uppercase'
+            }}>
+              Quick Actions
+            </h3>
+
+            {/* Quick Actions Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '20px' }}>
+              {/* Wait for Instructions - State-based */}
+              <button
+                onClick={() => handleQuickAction('wait')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: waitForInstructions ? '#FF9500' : '#2d2d2d',
+                  color: '#ffffff',
+                  border: waitForInstructions ? '2px solid #000000' : '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  position: 'relative'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>⏸️</span>
+                <span>Wait</span>
+                {waitForInstructions && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#39FF14',
+                    borderRadius: '50%',
+                    border: '1px solid #000',
+                    boxShadow: '0 0 6px #39FF14'
+                  }} />
+                )}
+              </button>
+
+              {/* Honk - Single event */}
+              <button
+                onClick={() => handleQuickAction('honk')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                  border: '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>🔊</span>
+                <span>Honk</span>
+              </button>
+
+              {/* Hazards - State-based */}
+              <button
+                onClick={() => handleQuickAction('hazards')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: hazardsOn ? '#FF3B30' : '#2d2d2d',
+                  color: '#ffffff',
+                  border: hazardsOn ? '2px solid #000000' : '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  position: 'relative'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>🚨</span>
+                <span>Hazards</span>
+                {hazardsOn && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#39FF14',
+                    borderRadius: '50%',
+                    border: '1px solid #000',
+                    boxShadow: '0 0 6px #39FF14',
+                    animation: 'pulse 2s infinite'
+                  }} />
+                )}
+              </button>
+
+              {/* Pull Over - Single action */}
+              <button
+                onClick={() => handleQuickAction('pull_over')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                  border: '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>🛑</span>
+                <span>Pull Over</span>
+              </button>
+
+              {/* Resume Route - Single action */}
+              <button
+                onClick={() => handleQuickAction('resume_route')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                  border: '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>🚗</span>
+                <span>Resume</span>
+              </button>
+
+              {/* Flash Lights - Single event */}
+              <button
+                onClick={() => handleQuickAction('flash_lights')}
+                style={{
+                  padding: '10px 8px',
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                  border: '1px solid #3d3d3d',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>💡</span>
+                <span>Flash</span>
+              </button>
+            </div>
+
             <h3 style={{
               margin: '0 0 12px 0',
               fontSize: '12px',
