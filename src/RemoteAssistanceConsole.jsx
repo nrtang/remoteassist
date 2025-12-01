@@ -688,18 +688,42 @@ const RemoteAssistanceConsole = () => {
               <span style={{ textTransform: 'capitalize' }}>{activeCamera} Camera • Live</span>
             </div>
 
-            {/* Center placeholder */}
-            <div style={{ textAlign: 'center', opacity: 0.3, zIndex: 1 }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>
-                {activeCamera === 'front' ? '📹' :
-                 activeCamera === 'rear' ? '🔄' :
-                 activeCamera === 'left' ? '⬅️' :
-                 activeCamera === 'right' ? '➡️' : '👁️'}
-              </div>
-              <div style={{ fontSize: '14px', color: '#8e8e93', textTransform: 'capitalize' }}>
-                {activeCamera} Camera Feed
-              </div>
-            </div>
+            {/* Camera feed placeholder images */}
+            <img
+              src={
+                activeCamera === 'front' ? 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1200&h=800&fit=crop' :
+                activeCamera === 'rear' ? 'https://images.unsplash.com/photo-1486849071369-f4a804b80d3e?w=1200&h=800&fit=crop' :
+                activeCamera === 'left' ? 'https://images.unsplash.com/photo-1502489597346-dad15683d4c2?w=1200&h=800&fit=crop' :
+                activeCamera === 'right' ? 'https://images.unsplash.com/photo-1485463611174-f302f6a5c1c9?w=1200&h=800&fit=crop' :
+                'https://images.unsplash.com/photo-1513569771920-c9e1d31714af?w=1200&h=800&fit=crop'
+              }
+              alt={`${activeCamera} camera view`}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 1,
+                opacity: 0.7
+              }}
+            />
+
+            {/* Camera overlay grid */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: `
+                repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(57, 255, 20, 0.1) 49px, rgba(57, 255, 20, 0.1) 50px),
+                repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(57, 255, 20, 0.1) 49px, rgba(57, 255, 20, 0.1) 50px)
+              `,
+              pointerEvents: 'none',
+              zIndex: 2
+            }} />
 
             {/* Scenario overlays */}
             {activeCamera === 'front' && currentTicket?.scenario === 'construction' && (
