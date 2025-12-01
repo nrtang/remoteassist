@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MapPin, Radio, Zap, AlertCircle, Users, User, Navigation, Eye, Package } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -105,8 +105,10 @@ const RemoteAssistanceConsole = () => {
     'Other Obstruction'
   ];
 
-  // Custom Leaflet icons
-  const vehicleIcon = new L.Icon({
+  const currentTicket = tickets.find(t => t.id === selectedTicket);
+
+  // Custom Leaflet icons - memoized to prevent recreation on every render
+  const vehicleIcon = useMemo(() => new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" fill="#39FF14" stroke="#000" stroke-width="2"/>
@@ -115,9 +117,9 @@ const RemoteAssistanceConsole = () => {
     `),
     iconSize: [24, 24],
     iconAnchor: [12, 12],
-  });
+  }), []);
 
-  const passengerIcon = new L.Icon({
+  const passengerIcon = useMemo(() => new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
         <path d="M12 0 C7 0 3 4 3 9 C3 14 12 24 12 24 S21 14 21 9 C21 4 17 0 12 0 Z" fill="#FF9500" stroke="#000" stroke-width="1.5"/>
@@ -126,9 +128,9 @@ const RemoteAssistanceConsole = () => {
     `),
     iconSize: [24, 32],
     iconAnchor: [12, 32],
-  });
+  }), []);
 
-  const oldPickupIcon = new L.Icon({
+  const oldPickupIcon = useMemo(() => new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
         <path d="M12 0 C7 0 3 4 3 9 C3 14 12 24 12 24 S21 14 21 9 C21 4 17 0 12 0 Z" fill="#FF3B30" stroke="#000" stroke-width="1.5" opacity="0.5"/>
@@ -138,9 +140,9 @@ const RemoteAssistanceConsole = () => {
     `),
     iconSize: [24, 32],
     iconAnchor: [12, 32],
-  });
+  }), []);
 
-  const newPickupIcon = new L.Icon({
+  const newPickupIcon = useMemo(() => new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
         <path d="M14 0 C8 0 3 5 3 11 C3 17 14 28 14 28 S25 17 25 11 C25 5 20 0 14 0 Z" fill="#39FF14" stroke="#000" stroke-width="2"/>
@@ -149,7 +151,7 @@ const RemoteAssistanceConsole = () => {
     `),
     iconSize: [28, 36],
     iconAnchor: [14, 36],
-  });
+  }), []);
 
   // San Francisco coordinates (Civic Center area)
   const mapCenter = [37.7797, -122.4184];
@@ -174,8 +176,6 @@ const RemoteAssistanceConsole = () => {
     if (context === 'Delivery') return '#5AC8FA';
     return '#8E8E93';
   };
-
-  const currentTicket = tickets.find(t => t.id === selectedTicket);
 
   const handleSendCommand = () => {
     if (isFleetMode && selectedMapAction) {
