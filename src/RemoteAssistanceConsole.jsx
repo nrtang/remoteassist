@@ -12,12 +12,14 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Component to handle map clicks for relocate mode
-const MapClickHandler = ({ interventionMode, onMapClick }) => {
+// Component to handle map clicks for relocate mode and fleet blocker placement
+const MapClickHandler = ({ interventionMode, isFleetMode, selectedMapAction, onMapClick, onFleetBlockerClick }) => {
   useMapEvents({
     click: (e) => {
       if (interventionMode === 'relocate') {
         onMapClick([e.latlng.lat, e.latlng.lng]);
+      } else if (isFleetMode && selectedMapAction) {
+        onFleetBlockerClick([e.latlng.lat, e.latlng.lng]);
       }
     },
   });
@@ -34,6 +36,7 @@ const RemoteAssistanceConsole = () => {
   const [newPickupLocation, setNewPickupLocation] = useState(null);
   const [isFleetMode, setIsFleetMode] = useState(false);
   const [selectedMapAction, setSelectedMapAction] = useState(null);
+  const [fleetBlockerLocation, setFleetBlockerLocation] = useState(null);
 
   // Quick Actions state
   const [waitForInstructions, setWaitForInstructions] = useState(false);
@@ -157,6 +160,18 @@ const RemoteAssistanceConsole = () => {
     iconAnchor: [14, 36],
   }), []);
 
+  const fleetBlockerIcon = useMemo(() => new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+        <path d="M16 0 C10 0 4 6 4 13 C4 20 16 32 16 32 S28 20 28 13 C28 6 22 0 16 0 Z" fill="#FF3B30" stroke="#000" stroke-width="2"/>
+        <circle cx="16" cy="13" r="6" fill="#fff"/>
+        <path d="M16 7 L16 19 M10 13 L22 13" stroke="#FF3B30" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    `),
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+  }), []);
+
   // San Francisco coordinates (Civic Center area)
   const mapCenter = [37.7797, -122.4184];
   const vehiclePosition = [37.7797, -122.4184];
@@ -182,7 +197,7 @@ const RemoteAssistanceConsole = () => {
   };
 
   const handleSendCommand = () => {
-    if (isFleetMode && selectedMapAction) {
+    if (isFleetMode && selectedMapAction && fleetBlockerLocation) {
       const actionNames = {
         'road_closure': 'mark this road as CLOSED',
         'hazard': 'report a HAZARD on this road',
@@ -191,6 +206,7 @@ const RemoteAssistanceConsole = () => {
       const confirmed = window.confirm(
         `⚠️ FLEET-WIDE CHANGE\n\n` +
         `You are about to ${actionNames[selectedMapAction]}.\n\n` +
+        `Location: ${fleetBlockerLocation[0].toFixed(6)}, ${fleetBlockerLocation[1].toFixed(6)}\n\n` +
         `This will affect 12 other vehicles in the fleet.\n\n` +
         `Reason: ${selectedReason}\n\n` +
         `Are you sure you want to proceed?`
@@ -198,6 +214,7 @@ const RemoteAssistanceConsole = () => {
       if (confirmed) {
         alert(`✓ Fleet map updated: ${selectedMapAction}\n12 vehicles rerouted`);
         setSelectedMapAction(null);
+        setFleetBlockerLocation(null);
       }
     } else if (interventionMode === 'draw' && pathPoints.length > 0) {
       alert(`Sending path with ${pathPoints.length} waypoints to ${currentTicket?.vehicleId}`);
@@ -836,10 +853,13 @@ const RemoteAssistanceConsole = () => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
 
-              {/* Map click handler for relocate mode */}
+              {/* Map click handler for relocate mode and fleet blocker placement */}
               <MapClickHandler
                 interventionMode={interventionMode}
+                isFleetMode={isFleetMode}
+                selectedMapAction={selectedMapAction}
                 onMapClick={(latlng) => setNewPickupLocation(latlng)}
+                onFleetBlockerClick={(latlng) => setFleetBlockerLocation(latlng)}
               />
 
               {/* Vehicle marker */}
@@ -887,9 +907,23 @@ const RemoteAssistanceConsole = () => {
                   </Popup>
                 </Marker>
               )}
+
+              {/* Fleet blocker location */}
+              {isFleetMode && selectedMapAction && fleetBlockerLocation && (
+                <Marker position={fleetBlockerLocation} icon={fleetBlockerIcon}>
+                  <Popup>
+                    <div style={{ color: '#000' }}>
+                      <strong>Fleet Blocker Location</strong><br/>
+                      {selectedMapAction === 'road_closure' && 'Road Closure'}
+                      {selectedMapAction === 'hazard' && 'Hazard'}
+                      {selectedMapAction === 'construction' && 'Construction Zone'}
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
             </MapContainer>
 
-            {/* Clear pin button */}
+            {/* Clear pin button for relocate mode */}
             {interventionMode === 'relocate' && newPickupLocation && (
               <button
                 onClick={(e) => {
@@ -915,25 +949,52 @@ const RemoteAssistanceConsole = () => {
               </button>
             )}
 
+            {/* Clear pin button for fleet blocker */}
+            {isFleetMode && selectedMapAction && fleetBlockerLocation && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFleetBlockerLocation(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  padding: '6px 12px',
+                  backgroundColor: '#FF3B30',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  zIndex: 1000
+                }}
+              >
+                Clear Pin
+              </button>
+            )}
+
             {/* Location label */}
             <div style={{
               position: 'absolute',
               top: '12px',
               left: '12px',
-              right: interventionMode === 'relocate' && newPickupLocation ? '100px' : '12px',
+              right: (interventionMode === 'relocate' && newPickupLocation) || (isFleetMode && selectedMapAction && fleetBlockerLocation) ? '100px' : '12px',
               backgroundColor: 'rgba(0, 0, 0, 0.8)',
               padding: '8px 10px',
               borderRadius: '6px',
               fontSize: '10px',
-              borderLeft: '3px solid #39FF14',
+              borderLeft: `3px solid ${isFleetMode && selectedMapAction ? '#FF3B30' : '#39FF14'}`,
               zIndex: 1000,
               pointerEvents: 'none'
             }}>
               <div style={{ fontWeight: 600, marginBottom: '2px' }}>
                 {currentTicket?.location}
               </div>
-              <div style={{ fontSize: '9px', color: interventionMode === 'relocate' ? '#39FF14' : '#8e8e93' }}>
-                {interventionMode === 'relocate' ? 'Click map to set pickup location' :
+              <div style={{ fontSize: '9px', color: isFleetMode && selectedMapAction ? '#FF3B30' : interventionMode === 'relocate' ? '#39FF14' : '#8e8e93' }}>
+                {isFleetMode && selectedMapAction ? 'Click map to place blocker pin' :
+                 interventionMode === 'relocate' ? 'Click map to set pickup location' :
                  currentTicket?.context === 'Pax Waiting' ? 'En route to pickup' :
                  currentTicket?.context === 'Pax Onboard' ? 'En route to destination' :
                  'Autonomous navigation'}
@@ -982,6 +1043,12 @@ const RemoteAssistanceConsole = () => {
                     )}
                   </>
                 )}
+                {isFleetMode && selectedMapAction && fleetBlockerLocation && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: '#FF3B30', borderRadius: '50%' }} />
+                    <span style={{ color: '#FF3B30', fontWeight: 600 }}>Blocker Pin</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1017,6 +1084,7 @@ const RemoteAssistanceConsole = () => {
               onClick={() => {
                 setIsFleetMode(false);
                 setSelectedMapAction(null);
+                setFleetBlockerLocation(null);
               }}
               style={{
                 padding: '8px 10px',
@@ -1438,21 +1506,21 @@ const RemoteAssistanceConsole = () => {
         {/* Send button */}
         <div style={{ padding: '20px', backgroundColor: '#0f0f0f' }}>
           <button
-            disabled={!selectedReason || 
-                     (!isFleetMode && interventionMode === 'draw' && pathPoints.length === 0) || 
+            disabled={!selectedReason ||
+                     (!isFleetMode && interventionMode === 'draw' && pathPoints.length === 0) ||
                      (!isFleetMode && interventionMode === 'nudge' && !selectedNudgeAction) ||
                      (!isFleetMode && interventionMode === 'relocate' && !newPickupLocation) ||
-                     (isFleetMode && !selectedMapAction)}
+                     (isFleetMode && (!selectedMapAction || !fleetBlockerLocation))}
             onClick={handleSendCommand}
             style={{
               width: '100%',
               padding: '16px',
-              backgroundColor: (selectedReason && ((isFleetMode && selectedMapAction) || 
+              backgroundColor: (selectedReason && ((isFleetMode && selectedMapAction && fleetBlockerLocation) ||
                 (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
                 (interventionMode === 'nudge' && selectedNudgeAction) ||
-                (interventionMode === 'relocate' && newPickupLocation))))) 
+                (interventionMode === 'relocate' && newPickupLocation)))))
                 ? (isFleetMode ? '#FF3B30' : '#39FF14') : '#2d2d2d',
-              color: (selectedReason && ((isFleetMode && selectedMapAction) || 
+              color: (selectedReason && ((isFleetMode && selectedMapAction && fleetBlockerLocation) ||
                 (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
                 (interventionMode === 'nudge' && selectedNudgeAction) ||
                 (interventionMode === 'relocate' && newPickupLocation)))))
@@ -1461,7 +1529,7 @@ const RemoteAssistanceConsole = () => {
               borderRadius: '8px',
               fontSize: '14px',
               fontWeight: 700,
-              cursor: (selectedReason && ((isFleetMode && selectedMapAction) || 
+              cursor: (selectedReason && ((isFleetMode && selectedMapAction && fleetBlockerLocation) ||
                 (!isFleetMode && ((interventionMode === 'draw' && pathPoints.length > 0) ||
                 (interventionMode === 'nudge' && selectedNudgeAction) ||
                 (interventionMode === 'relocate' && newPickupLocation))))) ? 'pointer' : 'not-allowed',
@@ -1476,8 +1544,8 @@ const RemoteAssistanceConsole = () => {
             color: '#8e8e93',
             textAlign: 'center'
           }}>
-            {isFleetMode ? (selectedMapAction ? '⚠️ Requires confirmation' : 'Select action above') : 
-             !selectedReason ? 'Select reason first' : 
+            {isFleetMode ? (!selectedMapAction ? 'Select action above' : !fleetBlockerLocation ? 'Click map to place pin' : '⚠️ Requires confirmation') :
+             !selectedReason ? 'Select reason first' :
              interventionMode === 'draw' && pathPoints.length === 0 ? 'Place waypoints on video' :
              interventionMode === 'nudge' && !selectedNudgeAction ? 'Select action above' :
              interventionMode === 'relocate' && !newPickupLocation ? 'Click map to set location' :
