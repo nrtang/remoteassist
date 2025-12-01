@@ -42,7 +42,10 @@ const RemoteAssistanceConsole = () => {
   const [waitForInstructions, setWaitForInstructions] = useState(false);
   const [hazardsOn, setHazardsOn] = useState(false);
 
-  const tickets = [
+  // Assignee management state
+  const [showConfirmTakeModal, setShowConfirmTakeModal] = useState(false);
+
+  const [tickets, setTickets] = useState([
     { 
       id: 'AV-2847', 
       vehicleId: 'RT-4521', 
@@ -99,7 +102,7 @@ const RemoteAssistanceConsole = () => {
       location: 'I-280 Onramp at King St',
       notes: 'Heavy traffic, waiting for safe merge opportunity'
     }
-  ];
+  ]);
 
   const reasons = [
     'Construction Zone',
@@ -256,6 +259,46 @@ const RemoteAssistanceConsole = () => {
       default:
         break;
     }
+  };
+
+  // Assignee management handlers
+  const handleTakeTask = () => {
+    if (!currentTicket) return;
+
+    // Check if task is already assigned to someone else
+    if (currentTicket.assignedTo === 'other') {
+      setShowConfirmTakeModal(true);
+    } else {
+      // Task is open, automatically take it
+      updateTicketAssignment(currentTicket.id, 'You', 'Sarah K.');
+      alert(`✓ Task ${currentTicket.id} assigned to you`);
+    }
+  };
+
+  const handleConfirmTakeFromOther = () => {
+    if (!currentTicket) return;
+
+    const previousAssignee = currentTicket.assignedOperator;
+    updateTicketAssignment(currentTicket.id, 'You', 'Sarah K.');
+    setShowConfirmTakeModal(false);
+    alert(`✓ Task ${currentTicket.id} reassigned to you (was: ${previousAssignee})`);
+  };
+
+  const handleReleaseTask = () => {
+    if (!currentTicket) return;
+
+    updateTicketAssignment(currentTicket.id, null, null);
+    alert(`✓ Task ${currentTicket.id} released and marked as open`);
+  };
+
+  const updateTicketAssignment = (ticketId, assignedTo, assignedOperator) => {
+    setTickets(prevTickets =>
+      prevTickets.map(ticket =>
+        ticket.id === ticketId
+          ? { ...ticket, assignedTo, assignedOperator }
+          : ticket
+      )
+    );
   };
 
   return (
@@ -495,6 +538,92 @@ const RemoteAssistanceConsole = () => {
               </div>
               <div style={{ color: '#FF9500', fontWeight: 500, fontStyle: 'italic' }}>
                 {currentTicket.notes}
+              </div>
+            </div>
+            <div style={{ flex: 1, borderLeft: '1px solid #3d3d3d', paddingLeft: '20px' }}>
+              <div style={{ color: '#8e8e93', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}>
+                Assignee
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {currentTicket.assignedTo === 'You' && (
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      backgroundColor: '#39FF14',
+                      color: '#000000',
+                      fontWeight: 600,
+                      display: 'inline-block'
+                    }}>
+                      Yours
+                    </span>
+                  )}
+                  {currentTicket.assignedTo === 'other' && (
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      backgroundColor: '#5E5E5E',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      display: 'inline-block'
+                    }}>
+                      {currentTicket.assignedOperator}
+                    </span>
+                  )}
+                  {!currentTicket.assignedTo && (
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid #5AC8FA',
+                      color: '#5AC8FA',
+                      fontWeight: 600,
+                      display: 'inline-block'
+                    }}>
+                      Open
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {currentTicket.assignedTo !== 'You' && (
+                    <button
+                      onClick={handleTakeTask}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#5AC8FA',
+                        color: '#000000',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        width: '100%'
+                      }}
+                    >
+                      Take Task
+                    </button>
+                  )}
+                  {currentTicket.assignedTo === 'You' && (
+                    <button
+                      onClick={handleReleaseTask}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#FF9500',
+                        color: '#000000',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        width: '100%'
+                      }}
+                    >
+                      Release Task
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1553,6 +1682,90 @@ const RemoteAssistanceConsole = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmTakeModal && currentTicket && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: '#2d2d2d',
+            border: '2px solid #FF9500',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: 700,
+              marginBottom: '16px',
+              color: '#FF9500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              ⚠️ Confirm Task Reassignment
+            </div>
+            <div style={{
+              fontSize: '14px',
+              color: '#ffffff',
+              marginBottom: '20px',
+              lineHeight: '1.5'
+            }}>
+              This task is currently assigned to <strong style={{ color: '#FF9500' }}>{currentTicket.assignedOperator}</strong>.
+              <br /><br />
+              Are you sure you want to take this task from them?
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <button
+                onClick={() => setShowConfirmTakeModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#5E5E5E',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmTakeFromOther}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#5AC8FA',
+                  color: '#000000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Yes, Take Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Styles */}
       <style>{`
