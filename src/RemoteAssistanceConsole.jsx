@@ -878,7 +878,7 @@ const RemoteAssistanceConsole = () => {
               <>
                 {/* Realistic construction scene photo - Road construction with lane closure */}
                 <img
-                  src="https://images.unsplash.com/photo-xZYprYQA77c?w=800&q=80"
+                  src="/construction-scene.svg"
                   alt="Road construction with traffic cones and lane closure"
                   style={{
                     position: 'absolute',
