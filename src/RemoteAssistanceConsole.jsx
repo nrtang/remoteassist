@@ -876,29 +876,51 @@ const RemoteAssistanceConsole = () => {
             {/* Scenario overlays */}
             {activeCamera === 'front' && currentTicket?.scenario === 'construction' && (
               <>
+                {/* Realistic construction scene photo - Road construction with lane closure */}
+                <img
+                  src="/construction-scene.jpg"
+                  alt="Road construction with traffic cones and lane closure"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    zIndex: 3,
+                    opacity: 0.95
+                  }}
+                />
+                {/* Detection overlays */}
                 <div style={{
                   position: 'absolute',
-                  top: '35%',
-                  left: '25%',
-                  width: '150px',
-                  height: '80px',
-                  border: '2px solid #FF9500',
+                  bottom: '20%',
+                  right: '15%',
+                  backgroundColor: 'rgba(255, 149, 0, 0.9)',
+                  padding: '6px 12px',
                   borderRadius: '4px',
-                  backgroundColor: 'rgba(255, 149, 0, 0.1)',
-                  zIndex: 5
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'white',
+                  zIndex: 6,
+                  border: '2px solid #FF9500'
                 }}>
-                  <div style={{
-                    position: 'absolute',
-                    top: '-20px',
-                    left: '0',
-                    backgroundColor: '#FF9500',
-                    padding: '2px 8px',
-                    borderRadius: '3px',
-                    fontSize: '10px',
-                    fontWeight: 600
-                  }}>
-                    Barrier
-                  </div>
+                  ⚠️ Flagger Detected
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  bottom: '30%',
+                  left: '20%',
+                  backgroundColor: 'rgba(255, 149, 0, 0.9)',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'white',
+                  zIndex: 6,
+                  border: '2px solid #FF9500'
+                }}>
+                  🚧 Cones Detected
                 </div>
               </>
             )}
